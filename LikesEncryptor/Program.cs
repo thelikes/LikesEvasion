@@ -15,7 +15,7 @@ namespace ShellcodeEncrypter
             [Option('i', "input", Required = true, HelpText = "Input file to be processed.")]
             public string inputBin { get; set; }
 
-            [Option('m', "mode", Required = true, HelpText = "Encryption/encoding mode (aesCS,ceasarCS,ceasarVBA,xorCS)")]
+            [Option('m', "mode", Required = true, HelpText = "Encryption/encoding mode (aesCS,caesarCS,caesarVBA,xorCS)")]
             public string encMode { get; set; }
 
             [Option('r', "resource", Required = false,Default = false, HelpText = "Output as an embeded resource file (normal is copy and paste code)")]
@@ -53,7 +53,7 @@ namespace ShellcodeEncrypter
                        {
                            CaesarVBAEncrypt(buf);
                        }
-                       else if (o.encMode.Equals("ceasarcs", StringComparison.OrdinalIgnoreCase))
+                       else if (o.encMode.Equals("caesarcs", StringComparison.OrdinalIgnoreCase))
                        {
                            CaesarCsharp(buf, o.outAsResource);
                        }
