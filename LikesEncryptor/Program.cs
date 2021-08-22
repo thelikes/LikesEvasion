@@ -127,7 +127,8 @@ namespace ShellcodeEncrypter
             encryptor.Padding = PaddingMode.Zeros;
 
             //byte[] buf = new byte[< size >] { < payload > };
-            encryptor.Key = CreateKey("secret");
+            //encryptor.Key = CreateKey("secret");
+            encryptor.Key = CreateKey(RandString(28));
             encryptor.IV = CreateKey("iv", 16);
 
             MemoryStream memoryStream = new MemoryStream();
@@ -136,9 +137,6 @@ namespace ShellcodeEncrypter
             cryptoStream.Write(buf, 0, buf.Length);
             cryptoStream.FlushFinalBlock();
             byte[] encoded = memoryStream.ToArray();
-
-            
-
 
             var csOut = "";
             if (asResource)
