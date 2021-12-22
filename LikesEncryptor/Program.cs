@@ -246,7 +246,7 @@ namespace ShellcodeEncrypter
 
                 string dText = XOR(eText, key);
 
-                Console.WriteLine("Deflate(FromHex(\"" + ToHexString(Encoding.Default.GetBytes(eText)) + "\"),FromHex(\"" + ToHexString(Encoding.Default.GetBytes(key)) + "\"));");
+                Console.WriteLine("LikesEvasion.Evade.Deflate(LikesEvasion.Evade.FromHex(\"" + ToHexString(Encoding.Default.GetBytes(eText)) + "\"),LikesEvasion.Evade.FromHex(\"" + ToHexString(Encoding.Default.GetBytes(key)) + "\"));");
             }
         }
         private static void CaesarCsharp(byte[] buf, bool asResource)

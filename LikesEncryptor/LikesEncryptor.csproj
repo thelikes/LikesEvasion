@@ -84,6 +84,8 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Templates\DecryptAesCsharpBytes.cs" />
+    <Compile Include="Templates\DecryptXorCsharpString.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
