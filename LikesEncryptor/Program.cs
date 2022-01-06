@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -68,6 +69,10 @@ namespace ShellcodeEncrypter
                         {
                             XORCsharp(buf, o.outAsResource);
                         }
+                        else if (o.encMode.Equals("gzip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            GzipBin(buf);
+                        }
                         else
                         {
                             Console.WriteLine("[!] error: unknown encryption mode");
@@ -131,6 +136,38 @@ namespace ShellcodeEncrypter
             String result = output.ToString();
 
             return result;
+        }
+        private static void GzipBin(byte[] buf)
+        {
+            // compress input
+            byte[] compressed = GzipBuffer(buf);
+
+            // write to file
+            File.WriteAllBytes(@"compressed.bin", compressed);
+
+            return;
+        }
+        public static byte[] GzipBuffer(byte[] data)
+        {
+            var compressedStream = new MemoryStream();
+            using (var gzipStream = new GZipStream(compressedStream, CompressionMode.Compress, false))
+            {
+                gzipStream.Write(data, 0, data.Length);
+            }
+
+            return compressedStream.ToArray();
+        }
+        public static byte[] UnGzipBuffer(byte[] compressedData)
+        {
+            var uncompressedStream = new MemoryStream();
+
+            using (var compressedStream = new MemoryStream(compressedData))
+            using (var gzipStream = new GZipStream(compressedStream, CompressionMode.Decompress))
+            {
+                gzipStream.CopyTo(uncompressedStream);
+            }
+
+            return uncompressedStream.ToArray();
         }
         /*
          * --- Csharp
