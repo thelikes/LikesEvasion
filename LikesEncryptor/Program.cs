@@ -95,6 +95,18 @@ namespace ShellcodeEncrypter
 
                             GzipBin(buf, o.outputFilename);
                         }
+                        else if (o.encMode.Equals("ungzip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // cannot output gzip to console
+                            if (!outAsResource)
+                            {
+                                Console.WriteLine("[!] Error: Output filename required for 'ungzip' mode.");
+
+                                return;
+                            }
+
+                            UnGzipBin(buf, o.outputFilename);
+                        }
                         else
                         {
                             Console.WriteLine("[!] error: unknown encryption mode");
@@ -178,6 +190,16 @@ namespace ShellcodeEncrypter
             }
 
             return compressedStream.ToArray();
+        }
+        private static void UnGzipBin(byte[] buf, string outputFilename)
+        {
+            // compress the buffer
+            Console.WriteLine("[>] Decompressing buffer");
+            byte[] decompressedBuf = UnGzipBuffer(buf);
+
+            // save the buffer to file
+            Console.WriteLine("[>] Writing output file");
+            File.WriteAllBytes(outputFilename, decompressedBuf);
         }
         public static byte[] UnGzipBuffer(byte[] compressedData)
         {
