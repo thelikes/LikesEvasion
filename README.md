@@ -118,5 +118,6 @@ PS> .\LikesEvasion.exe -m gzip -i .\SLIVER.bin -o .\SLIVER.bin.gzip
 [>] Bytes read: 10878164
 [>] Storing buffer in .\SLIVER.bin.gzip
 [>] Compressing buffer
+[>] Compressed size: 3897189
 [>] Writing output file
 ```

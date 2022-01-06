@@ -176,6 +176,7 @@ namespace ShellcodeEncrypter
             // compress the buffer
             Console.WriteLine("[>] Compressing buffer");
             byte[] compressedBuf = GzipBuffer(buf);
+            Console.WriteLine("[>] Compressed size: " + compressedBuf.Length);
 
             // save the buffer to file
             Console.WriteLine("[>] Writing output file");
