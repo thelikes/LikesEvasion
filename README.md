@@ -23,7 +23,7 @@ Copyright c  2022
 
 ### C# AES Bin Payload
 
-The following example encrypts the bin file using AES and stores the output in a text file. The text file can be added as a resource to a runner. Remove the `-r` flag to output the encrypted blob to the console for copy and paste. 
+The following example encrypts the bin file using AES and stores the output in a text file. The text file can be added as a resource to a runner. 
 
 ```
 PS> .\LikesEvasion.exe -m aescs -i .\calc.bin -o .\calc.bin.aes
