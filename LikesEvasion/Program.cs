@@ -67,7 +67,7 @@ namespace ShellcodeEncrypter
                         // csharp
                         if (o.encMode.Equals("aescs", StringComparison.OrdinalIgnoreCase))
                         {
-                            AesCsharp(buf, o.outputFilename);
+                            AesCsharp(buf, o.outputFilename, false);
                         }
                         else if (o.encMode.Equals("caesarcs", StringComparison.OrdinalIgnoreCase))
                         {
@@ -93,6 +93,26 @@ namespace ShellcodeEncrypter
                                 return;
                             }
 
+                            GzipBin(buf, o.outputFilename);
+                        }
+                        else if (o.encMode.Equals("gzipaes", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // cannot output gzip to console
+                            if (!outAsResource)
+                            {
+                                Console.WriteLine("[!] Error: Output filename required for 'gzip' mode.");
+
+                                return;
+                            }
+                            // TODO - rm tmp files
+                            string tmpOutputFilename = o.inputBin + ".gzip";
+                            GzipBin(buf, tmpOutputFilename);
+
+                            buf = File.ReadAllBytes(tmpOutputFilename);
+                            tmpOutputFilename = tmpOutputFilename + ".aes";
+                            AesCsharp(buf, tmpOutputFilename, true);
+
+                            buf = File.ReadAllBytes(tmpOutputFilename);
                             GzipBin(buf, o.outputFilename);
                         }
                         else if (o.encMode.Equals("ungzip", StringComparison.OrdinalIgnoreCase))
@@ -245,7 +265,7 @@ namespace ShellcodeEncrypter
             Console.WriteLine("string key = \""+key+"\";");
             Console.WriteLine("-----");
         }    
-        private static void AesCsharp(byte[] buf, string outputFilename)
+        private static void AesCsharp(byte[] buf, string outputFilename, bool storeAES)
         {
             Aes encryptor = Aes.Create();
             encryptor.Mode = CipherMode.CBC;
@@ -256,6 +276,18 @@ namespace ShellcodeEncrypter
             encryptor.Key = CreateKey(RandString(28));
             encryptor.IV = CreateKey("iv", 16);
 
+            // store the key & iv
+            if (storeAES)
+            {
+                string outAesKeyPath = ".\\aes-key.hex.cs";
+                string outAesIvPath = ".\\aes-iv.hex.cs";
+                Console.WriteLine("[>] Writing AES key to " + outAesKeyPath);
+                Console.WriteLine("[>] Writing AES IV to " + outAesIvPath);
+
+                File.WriteAllText(outAesKeyPath, ToHex(encryptor.Key));
+                File.WriteAllText(outAesIvPath, ToHex(encryptor.IV));
+            }
+            
             MemoryStream memoryStream = new MemoryStream();
             ICryptoTransform aesEncryptor = encryptor.CreateEncryptor();
             CryptoStream cryptoStream = new CryptoStream(memoryStream, aesEncryptor, CryptoStreamMode.Write);
